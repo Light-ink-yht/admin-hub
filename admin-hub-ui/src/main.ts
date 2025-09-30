@@ -1,3 +1,5 @@
+import '@/styles/style.scss'
+
 import { createApp } from 'vue'
 import pinia from '@/stores/index.ts'
 

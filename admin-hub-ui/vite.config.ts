@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { loadEnv } from 'vite'
 import type { EnvMeta } from './env'
+import { Components } from 'ant-design-vue/es/date-picker/generatePicker'
 
 const envDir = './'
 
@@ -13,7 +14,9 @@ export default defineConfig((config) => {
   const env = loadEnv(config.mode, envDir) as EnvMeta
   console.log('后端地址: ', env.VITE_APP_SERVER_URL)
   return {
-    plugins: [vue(), vueDevTools()],
+    plugins: [vue(),
+      vueDevTools(),
+    ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
