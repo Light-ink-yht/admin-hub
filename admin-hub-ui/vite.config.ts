@@ -5,7 +5,6 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { loadEnv } from 'vite'
 import type { EnvMeta } from './env'
-import { Components } from 'ant-design-vue/es/date-picker/generatePicker'
 
 const envDir = './'
 

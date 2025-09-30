@@ -6,8 +6,8 @@ import variables from '@/styles/variable.module.scss'
 /**
  * app 配置 开启持久化
  */
-export const useAppStore = defineStore(
-  'app',
+export const useThemeStore = defineStore(
+  'theme',
   () => {
     const themeName = ref('red') // 主题名称
     const darkMode = ref('light') // 颜色模式
