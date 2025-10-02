@@ -6,11 +6,12 @@ import authRoutes from './modules/auth'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    ...authRoutes,   // 认证模块路由
     {
       path: '/',
       component: () => import('@/views/layout/index.vue'),
       children: [
-        ...authRoutes,   // 认证模块路由
+
       ]
     }
   ],

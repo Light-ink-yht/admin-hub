@@ -1,0 +1,11 @@
+db.mysql:
+  dsn: "root:root@tcp(127.0.0.1:3306)/admin_hub?charset=utf8mb4&parseTime=True&loc=Local"
+
+redis:
+  addr: "127.0.0.1:6379"
+
+log:
+  environment: "pro"       # 开发环境: dev, 生产环境: pro
+  level: "info"           # 日志级别: debug, info, warn, error
+  file_path: "./logs/app.log"  # 日志文件路径
+  error_path: "./logs/error.log" # 错误日志路径
