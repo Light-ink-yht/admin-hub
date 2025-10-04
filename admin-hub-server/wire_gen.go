@@ -23,7 +23,9 @@ func InitWebServer() *gin.Engine {
 	v := ioc.InitMiddlewares(cmdable)
 	codeCache := code_cache.NewCodeCache(cmdable)
 	codeRepository := code_repo.NewCodeRepository(codeCache)
-	emailServiceFace := code_svc.NewEmailService(codeRepository)
+	db := ioc.InitDB()
+	logger := ioc.InitLogger(db)
+	emailServiceFace := code_svc.NewEmailService(codeRepository, logger)
 	userHandler := user_web.NewUserHandler(emailServiceFace)
 	engine := ioc.InitWebServer(v, userHandler)
 	return engine

@@ -1,17 +1,14 @@
 package main
 
 import (
-	"github.com/Light-ink-yht/admin-hub/init"
+	appinit "github.com/Light-ink-yht/admin-hub/init"
 )
 
 func main() {
 	// 初始化 viper
-	init.Viper()
+	appinit.Viper()
 
-	// 初始化 logger
-	init.Logger()
-
-	// 初始化 Web 服务器
+	// 初始化 Web 服务器（通过 wire 自动完成日志初始化）
 	server := InitWebServer()
 
 	// 启动 Web 服务器，监听 8080 端口

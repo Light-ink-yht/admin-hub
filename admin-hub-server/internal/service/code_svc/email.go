@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/msg_svc/email/tencent"
+	"go.uber.org/zap"
 	"math/rand"
 	"strings"
 )
@@ -15,27 +16,32 @@ type EmailServiceFace interface {
 }
 
 type EmailService struct {
-	repo *code_repo.CodeRepository
+	repo   *code_repo.CodeRepository
+	logger *zap.Logger
 }
 
-func NewEmailService(repo *code_repo.CodeRepository) EmailServiceFace {
+func NewEmailService(repo *code_repo.CodeRepository, logger *zap.Logger) EmailServiceFace {
 	return &EmailService{
-		repo: repo,
+		repo:   repo,
+		logger: logger,
 	}
 }
 
 // Send 发送验证码 biz 区分业务场景
 func (svc *EmailService) Send(ctx context.Context, biz string, email string, template string) error {
+	svc.logger.Info("开始发送验证码", zap.String("biz", biz), zap.String("email", email))
 
 	// 生成验证码
 	code := svc.generateCode()
+	svc.logger.Debug("生成验证码成功", zap.String("code", code))
 
 	// 塞进 redis
 	err := svc.repo.Store(ctx, biz, email, code)
 	if err != nil {
-		// 有问题
+		svc.logger.Error("存储验证码失败", zap.Error(err), zap.String("biz", biz), zap.String("email", email))
 		return err
 	}
+	svc.logger.Info("验证码存储成功", zap.String("biz", biz), zap.String("email", email))
 
 	// 替换模板中的 {code} 占位符
 	body := strings.ReplaceAll(template, "{code}", code)
