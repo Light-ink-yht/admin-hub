@@ -13,19 +13,74 @@ import (
 
 // LogService 日志服务接口
 type LogService interface {
-	// 记录常用日志
+	// LogCommon 记录常用日志
+	// ctx: 上下文对象，用于传递请求范围的值
+	// level: 日志级别（可选值：debug, info, warn, error）
+	// message: 日志消息内容
+	// fields: 额外的日志字段，用于记录更详细的信息
+	// caller: 调用者信息，标识哪个服务或模块调用了日志记录
+	// environment: 环境信息，如dev, test, prod等
 	LogCommon(ctx context.Context, level log_domain.LogLevel, message string, fields map[string]interface{}, caller string, environment string) error
-	// 记录登录日志
+
+	// LogLogin 记录登录日志
+	// ctx: 上下文对象
+	// level: 日志级别（可选值：debug, info, warn, error）
+	// message: 日志消息
+	// userID: 用户ID
+	// username: 用户名
+	// ip: 用户IP地址
+	// device: 用户设备信息
+	// status: 登录状态（成功/失败）
+	// reason: 状态原因描述
+	// fields: 额外字段
 	LogLogin(ctx context.Context, level log_domain.LogLevel, message string, userID, username, ip, device, status, reason string, fields map[string]interface{}) error
-	// 记录业务日志
+
+	// LogBusiness 记录业务日志
+	// ctx: 上下文对象
+	// level: 日志级别（可选值：debug, info, warn, error）
+	// module: 业务模块名称
+	// operation: 操作名称
+	// businessID: 业务ID，标识具体的业务对象
+	// operatorID: 操作者ID
+	// operatorName: 操作者名称
+	// content: 业务内容描述
+	// status: 业务操作状态
+	// reason: 状态原因描述
+	// ip: 操作者IP地址
+	// fields: 额外字段
 	LogBusiness(ctx context.Context, level log_domain.LogLevel, module, operation, businessID, operatorID, operatorName, content, status, reason, ip string, fields map[string]interface{}) error
-	// 获取常用日志列表
+
+	// GetCommonLogs 获取常用日志列表
+	// ctx: 上下文对象
+	// page: 页码，从1开始
+	// pageSize: 每页记录数
+	// startTime: 开始时间，格式YYYY-MM-DD HH:MM:SS
+	// endTime: 结束时间，格式YYYY-MM-DD HH:MM:SS
 	GetCommonLogs(ctx context.Context, page, pageSize int, startTime, endTime string) ([]*log_domain.LL01, int64, error)
-	// 获取登录日志列表
+
+	// GetLoginLogs 获取登录日志列表
+	// ctx: 上下文对象
+	// page: 页码
+	// pageSize: 每页记录数
+	// startTime: 开始时间
+	// endTime: 结束时间
+	// userID: 用户ID，可选，用于筛选特定用户的登录日志
 	GetLoginLogs(ctx context.Context, page, pageSize int, startTime, endTime string, userID string) ([]*log_domain.LL02, int64, error)
-	// 获取业务日志列表
+
+	// GetBusinessLogs 获取业务日志列表
+	// ctx: 上下文对象
+	// page: 页码
+	// pageSize: 每页记录数
+	// startTime: 开始时间
+	// endTime: 结束时间
+	// module: 业务模块，可选
+	// operatorID: 操作者ID，可选
 	GetBusinessLogs(ctx context.Context, page, pageSize int, startTime, endTime string, module, operatorID string) ([]*log_domain.LL03, int64, error)
-	// 删除日志
+
+	// DeleteLog 删除日志
+	// ctx: 上下文对象
+	// logType: 日志类型（可选值：common, business, login）
+	// logID: 日志ID
 	DeleteLog(ctx context.Context, logType log_domain.LogType, logID string) error
 }
 

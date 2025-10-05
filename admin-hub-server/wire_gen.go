@@ -9,7 +9,10 @@ package main
 import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/cache/code_cache"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
 	"github.com/gin-gonic/gin"
@@ -20,13 +23,15 @@ import (
 // InitWebServer 初始化 Web 服务器
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitMiddlewares(cmdable)
 	codeCache := code_cache.NewCodeCache(cmdable)
-	codeRepository := code_repo.NewCodeRepository(codeCache)
 	db := ioc.InitDB()
+	codeDAO := dao.NewCodeDAO(db)
+	codeRepository := code_repo.NewCodeRepository(codeCache, codeDAO)
+	logRepository := log_repo.NewLogRepository(db)
 	logger := ioc.InitLogger(db)
-	emailServiceFace := code_svc.NewEmailService(codeRepository, logger)
-	userHandler := user_web.NewUserHandler(emailServiceFace)
-	engine := ioc.InitWebServer(v, userHandler)
+	logService := log_svc.NewLogService(logRepository, logger)
+	emailServiceFace := code_svc.NewEmailService(codeRepository, logService)
+	userHandler := user_web.NewUserHandler(emailServiceFace, logService)
+	engine := ioc.InitWebServer(userHandler, cmdable, logService, logger)
 	return engine
 }

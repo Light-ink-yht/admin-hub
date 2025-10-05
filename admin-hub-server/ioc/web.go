@@ -1,29 +1,36 @@
 package ioc
 
 import (
+	"strings"
+	"time"
+
+	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
+	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
 	"github.com/Light-ink-yht/admin-hub/pkg/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"strings"
-	"time"
+	"go.uber.org/zap"
 )
 
 // InitWebServer 初始化 Web 服务器
-func InitWebServer(mdls []gin.HandlerFunc, userHdl *user_web.UserHandler) *gin.Engine {
+func InitWebServer(userHdl *user_web.UserHandler, redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) *gin.Engine {
 	server := gin.Default()
-	server.Use(mdls...)
+	middlewares := InitMiddlewares(redisClient, logService, logger)
+	server.Use(middlewares...)
 	r := server.Group("/api")
 	userHdl.RegisterRoutes(r)
 	return server
 }
 
 // InitMiddlewares 初始化中间件
-func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		// 跨域资源共享中间件
 		corsHdl(),
+		// 日志中间件 - 记录HTTP请求和响应信息
+		middleware.NewLogMiddleware(logService, logger),
 		// 基于 Redis 的速率限制中间件
 		ratelimit.NewBuilder(redisClient, time.Minute, 100).Build(),
 	}

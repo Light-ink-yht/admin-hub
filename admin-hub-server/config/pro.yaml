@@ -1,5 +1,5 @@
 db.mysql:
-  dsn: "root:root@tcp(127.0.0.1:3306)/admin_hub?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:root@tcp(127.0.0.1:3306)/admin-hub?charset=utf8mb4&parseTime=True&loc=Local"
 
 redis:
   addr: "127.0.0.1:6379"

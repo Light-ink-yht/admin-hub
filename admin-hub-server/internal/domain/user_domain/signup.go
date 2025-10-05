@@ -1,15 +1,10 @@
 package user_domain
 
-// SendSignupEmailCodeRequest 发送注册验证码请求体
-type SendSignupEmailCodeRequest struct {
-	AAA002 string
-}
-
-// Validate 校验请求参数
-func (req *SendSignupEmailCodeRequest) Validate() error {
-	// 校验邮箱格式
-	if match, _ := emailRegex.MatchString(req.AAA002); !match {
-		return ErrTheMailboxIsNotInTheRightFormat
-	}
-	return nil
+type SignUp struct {
+	AAA002 string // 邮箱 全局唯一
+	AAA003 string // 手机号 全局唯一
+	AAA004 string // 密码
+	AAA005 string // 昵称
+	AAA016 string // 确认密码
+	AAA017 string // 验证码
 }

@@ -3,11 +3,13 @@ package code_svc
 import (
 	"context"
 	"fmt"
-	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
-	"github.com/Light-ink-yht/admin-hub/internal/service/msg_svc/email/tencent"
-	"go.uber.org/zap"
 	"math/rand"
 	"strings"
+
+	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/msg_svc/email/tencent"
 )
 
 type EmailServiceFace interface {
@@ -16,32 +18,31 @@ type EmailServiceFace interface {
 }
 
 type EmailService struct {
-	repo   *code_repo.CodeRepository
-	logger *zap.Logger
+	repo       *code_repo.CodeRepository
+	logService log_svc.LogService
 }
 
-func NewEmailService(repo *code_repo.CodeRepository, logger *zap.Logger) EmailServiceFace {
+func NewEmailService(repo *code_repo.CodeRepository, logService log_svc.LogService) EmailServiceFace {
 	return &EmailService{
-		repo:   repo,
-		logger: logger,
+		repo:       repo,
+		logService: logService,
 	}
 }
 
 // Send 发送验证码 biz 区分业务场景
 func (svc *EmailService) Send(ctx context.Context, biz string, email string, template string) error {
-	svc.logger.Info("开始发送验证码", zap.String("biz", biz), zap.String("email", email))
 
 	// 生成验证码
 	code := svc.generateCode()
-	svc.logger.Debug("生成验证码成功", zap.String("code", code))
 
-	// 塞进 redis
+	// 塞进 redis 和数据库
 	err := svc.repo.Store(ctx, biz, email, code)
 	if err != nil {
-		svc.logger.Error("存储验证码失败", zap.Error(err), zap.String("biz", biz), zap.String("email", email))
+		// 记录失败日志
+		svc.logService.LogBusiness(ctx, log_domain.LogLevelError, "验证码服务", "发送验证码", "", "", "",
+			fmt.Sprintf("发送验证码失败: %s", email), "失败", err.Error(), "", nil)
 		return err
 	}
-	svc.logger.Info("验证码存储成功", zap.String("biz", biz), zap.String("email", email))
 
 	// 替换模板中的 {code} 占位符
 	body := strings.ReplaceAll(template, "{code}", code)
@@ -55,6 +56,21 @@ func (svc *EmailService) Send(ctx context.Context, biz string, email string, tem
 	emailService := tencent.NewEmailService(authEmail, authPwd, smtpHost, smtpPort)
 	// 发送出去
 	err = emailService.Send(ctx, email, "【灵脑科技】", body)
+
+	// 记录业务日志
+	if err != nil {
+		err := svc.logService.LogBusiness(ctx, log_domain.LogLevelError, "验证码服务", "发送验证码", "", "", "",
+			fmt.Sprintf("邮件发送失败: %s", email), "失败", err.Error(), "", nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := svc.logService.LogBusiness(ctx, log_domain.LogLevelInfo, "验证码服务", "发送验证码", "", "", "",
+			fmt.Sprintf("邮件发送成功: %s :%s", email, code), "成功", "", "", nil)
+		if err != nil {
+			return err
+		}
+	}
 
 	return err
 }

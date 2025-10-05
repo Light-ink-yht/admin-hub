@@ -5,7 +5,10 @@ package main
 import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/cache/code_cache"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
 	"github.com/gin-gonic/gin"
@@ -22,6 +25,7 @@ func InitWebServer() *gin.Engine {
 		ioc.InitLogger,
 
 		// 初始化 DAO
+		dao.NewCodeDAO,
 
 		// 初始化 cache
 		code_cache.NewCodeCache,
@@ -29,14 +33,15 @@ func InitWebServer() *gin.Engine {
 		// 初始化 Repository
 		code_repo.NewCodeRepository,
 
+		// 初始化 LogService 相关依赖
+		log_repo.NewLogRepository,
+		log_svc.NewLogService,
+
 		// 初始化 Service
 		code_svc.NewEmailService,
 
 		// 初始化 Handler
-		user_web.NewUserHandler,
-
-		// 初始化中间件
-		ioc.InitMiddlewares,
+		user_web.NewUserHandler, // 会自动注入 codeSvc, logService, logger
 
 		// 初始化 Web 服务器
 		ioc.InitWebServer,

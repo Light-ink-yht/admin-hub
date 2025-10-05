@@ -2,9 +2,10 @@ package user_domain
 
 import (
 	"errors"
+	"time"
+
 	"github.com/Light-ink-yht/admin-hub/pkg/model"
 	"github.com/dlclark/regexp2"
-	"time"
 )
 
 // AA01 用户模型

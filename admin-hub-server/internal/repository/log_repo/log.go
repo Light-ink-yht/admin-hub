@@ -8,18 +8,36 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
 )
 
-type LogRepository struct {
+// LogRepository 日志仓库接口
+type LogRepository interface {
+	// SaveCommonLog 保存常用日志到数据库
+	SaveCommonLog(ctx context.Context, log *log_domain.LL01) error
+	// SaveLoginLog 保存登录日志到数据库
+	SaveLoginLog(ctx context.Context, log *log_domain.LL02) error
+	// SaveBusinessLog 保存业务日志到数据库
+	SaveBusinessLog(ctx context.Context, log *log_domain.LL03) error
+	// GetCommonLogs 获取常用日志列表
+	GetCommonLogs(ctx context.Context, page, pageSize int, startTime, endTime string) ([]*dao.LL01, int64, error)
+	// GetLoginLogs 获取登录日志列表
+	GetLoginLogs(ctx context.Context, page, pageSize int, startTime, endTime string, userID string) ([]*dao.LL02, int64, error)
+	// GetBusinessLogs 获取业务日志列表
+	GetBusinessLogs(ctx context.Context, page, pageSize int, startTime, endTime string, module, operatorID string) ([]*dao.LL03, int64, error)
+	// DeleteLog 删除日志
+	DeleteLog(ctx context.Context, logType log_domain.LogType, logID string) error
+}
+
+type logRepository struct {
 	db *sql.DB
 }
 
-func NewLogRepository(db *sql.DB) *LogRepository {
-	return &LogRepository{
+func NewLogRepository(db *sql.DB) LogRepository {
+	return &logRepository{
 		db: db,
 	}
 }
 
 // SaveCommonLog 保存常用日志到数据库
-func (repo *LogRepository) SaveCommonLog(ctx context.Context, log *log_domain.LL01) error {
+func (repo *logRepository) SaveCommonLog(ctx context.Context, log *log_domain.LL01) error {
 	_, err := repo.db.ExecContext(ctx,
 		"INSERT INTO ll01 (lla001, lla002, lla003, lla004, lla005, lla006, lla007) VALUES (?, ?, ?, ?, ?, ?, ?)",
 		log.LLA001, log.LLA002, log.LLA003, log.LLA004, log.LLA005, log.LLA006, log.LLA007,
@@ -28,7 +46,7 @@ func (repo *LogRepository) SaveCommonLog(ctx context.Context, log *log_domain.LL
 }
 
 // SaveLoginLog 保存登录日志到数据库
-func (repo *LogRepository) SaveLoginLog(ctx context.Context, log *log_domain.LL02) error {
+func (repo *logRepository) SaveLoginLog(ctx context.Context, log *log_domain.LL02) error {
 	_, err := repo.db.ExecContext(ctx,
 		"INSERT INTO ll02 (lla001, lla002, lla003, lla004, lla005, lla006, lla007, lla008, lla009, lla010, lla011) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		log.LLA001, log.LLA002, log.LLA003, log.LLA004, log.LLA005, log.LLA006, log.LLA007, log.LLA008, log.LLA009, log.LLA010, log.LLA011,
@@ -37,7 +55,7 @@ func (repo *LogRepository) SaveLoginLog(ctx context.Context, log *log_domain.LL0
 }
 
 // SaveBusinessLog 保存业务日志到数据库
-func (repo *LogRepository) SaveBusinessLog(ctx context.Context, log *log_domain.LL03) error {
+func (repo *logRepository) SaveBusinessLog(ctx context.Context, log *log_domain.LL03) error {
 	_, err := repo.db.ExecContext(ctx,
 		"INSERT INTO ll03 (lla001, lla002, lla003, lla004, lla005, lla006, lla007, lla008, lla009, lla010, lla011, lla012, lla013) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		log.LLA001, log.LLA002, log.LLA003, log.LLA004, log.LLA005, log.LLA006, log.LLA007, log.LLA008, log.LLA009, log.LLA010, log.LLA011, log.LLA012, log.LLA013,
@@ -46,7 +64,7 @@ func (repo *LogRepository) SaveBusinessLog(ctx context.Context, log *log_domain.
 }
 
 // GetCommonLogs 获取常用日志列表
-func (repo *LogRepository) GetCommonLogs(ctx context.Context, page, pageSize int, startTime, endTime string) ([]*dao.LL01, int64, error) {
+func (repo *logRepository) GetCommonLogs(ctx context.Context, page, pageSize int, startTime, endTime string) ([]*dao.LL01, int64, error) {
 	offset := (page - 1) * pageSize
 	query := "SELECT * FROM ll01 WHERE lla007 BETWEEN ? AND ? AND lan005 = '1' ORDER BY lla007 DESC LIMIT ? OFFSET ?"
 	countQuery := "SELECT COUNT(*) FROM ll01 WHERE lla007 BETWEEN ? AND ? AND lan005 = '1'"
@@ -55,7 +73,7 @@ func (repo *LogRepository) GetCommonLogs(ctx context.Context, page, pageSize int
 }
 
 // GetLoginLogs 获取登录日志列表
-func (repo *LogRepository) GetLoginLogs(ctx context.Context, page, pageSize int, startTime, endTime string, userID string) ([]*dao.LL02, int64, error) {
+func (repo *logRepository) GetLoginLogs(ctx context.Context, page, pageSize int, startTime, endTime string, userID string) ([]*dao.LL02, int64, error) {
 	offset := (page - 1) * pageSize
 	var query, countQuery string
 	var args []interface{}
@@ -74,7 +92,7 @@ func (repo *LogRepository) GetLoginLogs(ctx context.Context, page, pageSize int,
 }
 
 // GetBusinessLogs 获取业务日志列表
-func (repo *LogRepository) GetBusinessLogs(ctx context.Context, page, pageSize int, startTime, endTime string, module, operatorID string) ([]*dao.LL03, int64, error) {
+func (repo *logRepository) GetBusinessLogs(ctx context.Context, page, pageSize int, startTime, endTime string, module, operatorID string) ([]*dao.LL03, int64, error) {
 	offset := (page - 1) * pageSize
 	var query, countQuery string
 	var args []interface{}
@@ -102,7 +120,7 @@ func (repo *LogRepository) GetBusinessLogs(ctx context.Context, page, pageSize i
 }
 
 // DeleteLog 删除日志
-func (repo *LogRepository) DeleteLog(ctx context.Context, logType log_domain.LogType, logID string) error {
+func (repo *logRepository) DeleteLog(ctx context.Context, logType log_domain.LogType, logID string) error {
 	var tableName string
 	switch logType {
 	case log_domain.LogTypeCommon:
