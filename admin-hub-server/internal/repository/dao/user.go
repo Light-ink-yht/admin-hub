@@ -1,8 +1,9 @@
 package dao
 
 import (
-	"github.com/Light-ink-yht/admin-hub/pkg/model"
 	"time"
+
+	"github.com/Light-ink-yht/admin-hub/pkg/model"
 )
 
 // AA01 用户模型

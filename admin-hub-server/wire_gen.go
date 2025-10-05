@@ -10,9 +10,11 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/cache/code_cache"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
 	"github.com/gin-gonic/gin"
@@ -30,8 +32,13 @@ func InitWebServer() *gin.Engine {
 	logRepository := log_repo.NewLogRepository(db)
 	logger := ioc.InitLogger(db)
 	logService := log_svc.NewLogService(logRepository, logger)
-	emailServiceFace := code_svc.NewEmailService(codeRepository, logService)
+	emailConfigDAO := dao.NewEmailConfigDAO(db)
+	emailConfigRepository := email_repo.NewEmailConfigRepository(emailConfigDAO)
+	emailTemplateDAO := dao.NewEmailTemplateDAO(db)
+	emailTemplateRepository := email_repo.NewEmailTemplateRepository(emailTemplateDAO)
+	emailServiceFace := code_svc.NewEmailService(codeRepository, logService, emailConfigRepository, emailTemplateRepository)
 	userHandler := user_web.NewUserHandler(emailServiceFace, logService)
-	engine := ioc.InitWebServer(userHandler, cmdable, logService, logger)
+	emailHandler := email_web.NewEmailHandler(emailConfigRepository, emailTemplateRepository, logService)
+	engine := ioc.InitWebServer(userHandler, emailHandler, cmdable, logService, logger)
 	return engine
 }

@@ -59,13 +59,9 @@ func (h *UserHandler) SendSignupEmailCode(ctx *gin.Context) {
 		return
 	}
 
-	body := `<p>您的验证码是：<strong>{code}</strong></p>
-          <p>请在10分钟内使用该验证码完成验证。</p>`
-	err := h.codeSvc.Send(ctx, biz, req.AAA002, body)
+	err := h.codeSvc.Send(ctx, biz, req.AAA002, "发送邮箱验证码")
 
 	if err != nil {
-		// 获取客户端IP和处理时间
-
 		// 记录业务错误日志
 		content := fmt.Sprintf("发送验证码失败: %s", req.AAA002)
 		h.logService.LogBusiness(ctx, log_domain.LogLevelError, "用户Web层", "发送注册邮箱验证码", "", "", "",

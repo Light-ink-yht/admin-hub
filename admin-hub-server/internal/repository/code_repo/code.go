@@ -20,16 +20,16 @@ var ErrCodeDBOperationFailed = errors.New("验证码数据库操作失败")
 // 实现了验证码的存储、验证等核心功能
 // 在保持原有Redis高性能的同时，增加了数据库持久化能力
 
-// 验证码有效期，与Redis中的设置保持一致（600秒）
+// CodeExpireTime 验证码有效期，与Redis中的设置保持一致（600秒）
 const CodeExpireTime = 600 * time.Second
 
-// 验证码最大验证次数
+// MaxVerifyAttempts 验证码最大验证次数
 const MaxVerifyAttempts = 3
 
-// 发送频率限制时间窗口（秒）
+// SendFrequencyWindow 发送频率限制时间窗口（秒）
 const SendFrequencyWindow = 60 * time.Second
 
-// 发送频率限制次数
+// MaxSendCountInWindow 发送频率限制次数
 const MaxSendCountInWindow = 5
 
 // CodeRepository 验证码仓库结构体

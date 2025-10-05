@@ -1,14 +1,11 @@
-// ====================================================================
-// dao 包
-// 提供与数据库交互的数据访问对象
-// ====================================================================
 package dao
 
 import (
 	"context"
 	"database/sql"
-	"github.com/Light-ink-yht/admin-hub/internal/domain/code_domain"
 	"time"
+
+	"github.com/Light-ink-yht/admin-hub/internal/domain/code_domain"
 )
 
 // ====================================================================
@@ -28,7 +25,7 @@ type CodeDAO struct {
 	db *sql.DB // 数据库连接对象
 }
 
-// ====================================================================
+// NewCodeDAO ====================================================================
 // NewCodeDAO 创建新的验证码DAO实例
 // 参数：
 // - db: 数据库连接对象
@@ -41,7 +38,7 @@ func NewCodeDAO(db *sql.DB) *CodeDAO {
 	}
 }
 
-// ====================================================================
+// CreateCodeTable ====================================================================
 // CreateCodeTable 创建验证码表
 // 在数据库中创建CD01验证码表，包含所需的字段和索引
 // 参数：
@@ -92,7 +89,7 @@ func (dao *CodeDAO) CreateCodeTable(ctx context.Context) error {
 	return err
 }
 
-// ====================================================================
+// Insert ====================================================================
 // Insert 插入验证码记录
 // 将验证码领域模型数据插入到数据库中
 // 使用ON DUPLICATE KEY UPDATE确保在唯一键冲突时更新现有记录
@@ -134,7 +131,7 @@ func (dao *CodeDAO) Insert(ctx context.Context, code *code_domain.Code) error {
 	return err
 }
 
-// ====================================================================
+// FindByBizAndInput ====================================================================
 // FindByBizAndInput 根据业务类型和用户输入查询验证码
 // 查询指定业务类型和用户输入的最新有效验证码
 // 参数：
@@ -178,7 +175,7 @@ func (dao *CodeDAO) FindByBizAndInput(ctx context.Context, biz, input string) (*
 	return &code, err
 }
 
-// ====================================================================
+// Update ====================================================================
 // Update 更新验证码信息
 // 更新验证码的验证次数和状态
 // 参数：
@@ -199,7 +196,7 @@ func (dao *CodeDAO) Update(ctx context.Context, code *code_domain.Code) error {
 	return err
 }
 
-// ====================================================================
+// CountByBizAndInputInTimeRange ====================================================================
 // CountByBizAndInputInTimeRange 统计指定时间范围内某业务类型和输入的验证码数量
 // 用于实现发送频率限制功能
 // 参数：
@@ -224,7 +221,7 @@ func (dao *CodeDAO) CountByBizAndInputInTimeRange(ctx context.Context, biz, inpu
 	return count, err
 }
 
-// ====================================================================
+// CleanExpiredCodes ====================================================================
 // CleanExpiredCodes 清理过期的验证码
 // 删除已过期且状态为已过期或已失效的验证码记录
 // 参数：
