@@ -6,7 +6,7 @@ import (
 
 	"github.com/Light-ink-yht/admin-hub/internal/domain/email_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
-	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/service/email_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web"
 	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
@@ -18,20 +18,17 @@ import (
 var _ web.Handler = (*EmailHandler)(nil)
 
 type EmailHandler struct {
-	emailConfigRepo   email_repo.EmailConfigRepository
-	emailTemplateRepo email_repo.EmailTemplateRepository
-	logService        log_svc.LogService
+	emailService email_svc.EmailService
+	logService   log_svc.LogService
 }
 
 func NewEmailHandler(
-	emailConfigRepo email_repo.EmailConfigRepository,
-	emailTemplateRepo email_repo.EmailTemplateRepository,
+	emailService email_svc.EmailService,
 	logService log_svc.LogService,
 ) *EmailHandler {
 	return &EmailHandler{
-		emailConfigRepo:   emailConfigRepo,
-		emailTemplateRepo: emailTemplateRepo,
-		logService:        logService,
+		emailService: emailService,
+		logService:   logService,
 	}
 }
 
@@ -76,7 +73,7 @@ func (h *EmailHandler) CreateEmailConfig(ctx *gin.Context) {
 		req.EMA007 = 1 // 默认启用
 	}
 
-	if err := h.emailConfigRepo.Create(&req); err != nil {
+	if err := h.emailService.CreateEmailConfig(&req); err != nil {
 		h.logError(ctx, "创建邮件配置", "保存失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -98,7 +95,7 @@ func (h *EmailHandler) UpdateEmailConfig(ctx *gin.Context) {
 	}
 
 	req.EMA001 = id
-	if err := h.emailConfigRepo.Update(&req); err != nil {
+	if err := h.emailService.UpdateEmailConfig(&req); err != nil {
 		h.logError(ctx, "更新邮件配置", "保存失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -113,7 +110,7 @@ func (h *EmailHandler) UpdateEmailConfig(ctx *gin.Context) {
 // DeleteEmailConfig 删除邮件配置
 func (h *EmailHandler) DeleteEmailConfig(ctx *gin.Context) {
 	id := ctx.Param("id")
-	if err := h.emailConfigRepo.Delete(id); err != nil {
+	if err := h.emailService.DeleteEmailConfig(id); err != nil {
 		h.logError(ctx, "删除邮件配置", "失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -132,7 +129,7 @@ func (h *EmailHandler) GetEmailConfigs(ctx *gin.Context) {
 
 	// 如果提供了ID，获取单个配置
 	if id != "" {
-		config, err := h.emailConfigRepo.GetByID(id)
+		config, err := h.emailService.GetEmailConfigByID(id)
 		if err != nil {
 			h.logError(ctx, "获取邮件配置", "查询失败", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -153,7 +150,7 @@ func (h *EmailHandler) GetEmailConfigs(ctx *gin.Context) {
 	}
 
 	// 否则获取所有配置
-	configs, err := h.emailConfigRepo.GetAll()
+	configs, err := h.emailService.GetAllEmailConfigs()
 	if err != nil {
 		h.logError(ctx, "获取所有邮件配置", "查询失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -176,13 +173,7 @@ func (h *EmailHandler) UpdateEmailConfigStatus(ctx *gin.Context) {
 		return
 	}
 
-	var err error
-	if status == "enable" {
-		err = h.emailConfigRepo.Enable(id)
-	} else {
-		err = h.emailConfigRepo.Disable(id)
-	}
-
+	err := h.emailService.UpdateEmailConfigStatus(id, status)
 	if err != nil {
 		h.logError(ctx, "更新邮件配置状态", "失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -198,7 +189,7 @@ func (h *EmailHandler) UpdateEmailConfigStatus(ctx *gin.Context) {
 
 // GetDefaultEmailConfig 获取默认邮件配置
 func (h *EmailHandler) GetDefaultEmailConfig(ctx *gin.Context) {
-	config, err := h.emailConfigRepo.GetDefault()
+	config, err := h.emailService.GetDefaultEmailConfig()
 	if err != nil {
 		h.logError(ctx, "获取默认邮件配置", "查询失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -219,7 +210,7 @@ func (h *EmailHandler) GetDefaultEmailConfig(ctx *gin.Context) {
 func (h *EmailHandler) SetDefaultEmailConfig(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	if err := h.emailConfigRepo.SetDefault(id); err != nil {
+	if err := h.emailService.SetDefaultEmailConfig(id); err != nil {
 		h.logError(ctx, "设置默认邮件配置", "设置失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -239,7 +230,7 @@ func (h *EmailHandler) GetEmailTemplates(ctx *gin.Context) {
 
 	// 如果提供了ID，获取单个模板
 	if id != "" {
-		template, err := h.emailTemplateRepo.GetByID(id)
+		template, err := h.emailService.GetEmailTemplateByID(id)
 		if err != nil {
 			h.logError(ctx, "获取邮件模板", "查询失败", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -261,7 +252,7 @@ func (h *EmailHandler) GetEmailTemplates(ctx *gin.Context) {
 
 	// 如果提供了类型，根据类型获取模板
 	if templateType != "" {
-		template, err := h.emailTemplateRepo.GetByType(templateType)
+		template, err := h.emailService.GetEmailTemplateByType(templateType)
 		if err != nil {
 			h.logError(ctx, "获取邮件模板", "查询失败", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -282,7 +273,7 @@ func (h *EmailHandler) GetEmailTemplates(ctx *gin.Context) {
 	}
 
 	// 否则获取所有模板
-	templates, err := h.emailTemplateRepo.GetAll()
+	templates, err := h.emailService.GetAllEmailTemplates()
 	if err != nil {
 		h.logError(ctx, "获取所有邮件模板", "查询失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -305,13 +296,7 @@ func (h *EmailHandler) UpdateEmailTemplateStatus(ctx *gin.Context) {
 		return
 	}
 
-	var err error
-	if status == "enable" {
-		err = h.emailTemplateRepo.Enable(id)
-	} else {
-		err = h.emailTemplateRepo.Disable(id)
-	}
-
+	err := h.emailService.UpdateEmailTemplateStatus(id, status)
 	if err != nil {
 		h.logError(ctx, "更新邮件模板状态", "失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -341,7 +326,7 @@ func (h *EmailHandler) CreateEmailTemplate(ctx *gin.Context) {
 	// 设置创建时间
 	req.EMB007 = time.Now()
 
-	if err := h.emailTemplateRepo.Create(&req); err != nil {
+	if err := h.emailService.CreateEmailTemplate(&req); err != nil {
 		h.logError(ctx, "创建邮件模板", "保存失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -366,7 +351,7 @@ func (h *EmailHandler) UpdateEmailTemplate(ctx *gin.Context) {
 	req.EMB008 = time.Now()
 
 	req.EMB001 = id
-	if err := h.emailTemplateRepo.Update(&req); err != nil {
+	if err := h.emailService.UpdateEmailTemplate(&req); err != nil {
 		h.logError(ctx, "更新邮件模板", "保存失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -381,7 +366,7 @@ func (h *EmailHandler) UpdateEmailTemplate(ctx *gin.Context) {
 // DeleteEmailTemplate 删除邮件模板
 func (h *EmailHandler) DeleteEmailTemplate(ctx *gin.Context) {
 	id := ctx.Param("id")
-	if err := h.emailTemplateRepo.Delete(id); err != nil {
+	if err := h.emailService.DeleteEmailTemplate(id); err != nil {
 		h.logError(ctx, "删除邮件模板", "失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
 		return
@@ -396,7 +381,7 @@ func (h *EmailHandler) DeleteEmailTemplate(ctx *gin.Context) {
 // SearchEmailTemplates 搜索邮件模板
 func (h *EmailHandler) SearchEmailTemplates(ctx *gin.Context) {
 	keyword := ctx.Query("keyword")
-	templates, err := h.emailTemplateRepo.Search(keyword)
+	templates, err := h.emailService.SearchEmailTemplates(keyword)
 	if err != nil {
 		h.logError(ctx, "搜索邮件模板", "查询失败", err)
 		ctx.JSON(http.StatusOK, res.FailWithWarn(err.Error()))
@@ -404,9 +389,9 @@ func (h *EmailHandler) SearchEmailTemplates(ctx *gin.Context) {
 	}
 
 	h.logSuccess(ctx, "搜索邮件模板", "成功", map[string]interface{}{
-		"keyword": keyword,
+		"count": len(templates),
 	})
-	ctx.JSON(http.StatusOK, res.SuccessWithData("获取成功", templates))
+	ctx.JSON(http.StatusOK, res.SuccessWithData("邮件模板获取成功", templates))
 }
 
 // 记录错误日志

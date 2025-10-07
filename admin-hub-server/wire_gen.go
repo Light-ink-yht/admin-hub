@@ -12,11 +12,15 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/sms_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/user_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/email_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/sms_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/user_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/sms_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
 	"github.com/gin-gonic/gin"
@@ -42,8 +46,15 @@ func InitWebServer() *gin.Engine {
 	emailTemplateDAO := dao.NewEmailTemplateDAO(db)
 	emailTemplateRepository := email_repo.NewEmailTemplateRepository(emailTemplateDAO)
 	emailServiceFace := code_svc.NewEmailService(codeRepository, logService, emailConfigRepository, emailTemplateRepository)
-	userHandler := user_web.NewUserHandler(userService, emailServiceFace, logService)
-	emailHandler := email_web.NewEmailHandler(emailConfigRepository, emailTemplateRepository, logService)
-	engine := ioc.InitWebServer(userHandler, emailHandler, cmdable, logService, logger)
+	smsConfigDAO := dao.NewSmsConfigDAO(db)
+	smsConfigRepository := sms_repo.NewSmsConfigRepository(smsConfigDAO)
+	smsTemplateRepository := sms_repo.NewSmsTemplateRepository(smsConfigDAO)
+	smsServiceFace := code_svc.NewSmsService(codeRepository, logService, smsConfigRepository, smsTemplateRepository)
+	userHandler := user_web.NewUserHandler(userService, emailServiceFace, smsServiceFace, logService)
+	emailService := email_svc.NewEmailService(emailConfigRepository, emailTemplateRepository)
+	emailHandler := email_web.NewEmailHandler(emailService, logService)
+	service := sms_svc.NewSmsService(smsConfigRepository, smsTemplateRepository, logService)
+	smsHandler := sms_web.NewSmsHandler(service, logService)
+	engine := ioc.InitWebServer(userHandler, emailHandler, smsHandler, cmdable, logService, logger)
 	return engine
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/sms_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
 	"github.com/Light-ink-yht/admin-hub/pkg/ratelimit"
@@ -16,13 +17,14 @@ import (
 )
 
 // InitWebServer 初始化 Web 服务器
-func InitWebServer(userHdl *user_web.UserHandler, emailHdl *email_web.EmailHandler, redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) *gin.Engine {
+func InitWebServer(userHdl *user_web.UserHandler, emailHdl *email_web.EmailHandler, smsHdl *sms_web.SmsHandler, redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) *gin.Engine {
 	server := gin.Default()
 	middlewares := InitMiddlewares(redisClient, logService, logger)
 	server.Use(middlewares...)
 	r := server.Group("/api")
 	userHdl.RegisterRoutes(r)
 	emailHdl.RegisterRoutes(r)
+	smsHdl.RegisterRoutes(r)
 	return server
 }
 

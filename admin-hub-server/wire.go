@@ -8,11 +8,15 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/sms_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/user_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/email_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/sms_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/user_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/sms_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
 	"github.com/gin-gonic/gin"
@@ -32,6 +36,7 @@ func InitWebServer() *gin.Engine {
 		dao.NewCodeDAO,
 		dao.NewEmailConfigDAO,
 		dao.NewEmailTemplateDAO,
+		dao.NewSmsConfigDAO,
 		dao.NewUserDao,
 
 		// 初始化 cache
@@ -41,6 +46,8 @@ func InitWebServer() *gin.Engine {
 		code_repo.NewCodeRepository,
 		email_repo.NewEmailConfigRepository,
 		email_repo.NewEmailTemplateRepository,
+		sms_repo.NewSmsConfigRepository,
+		sms_repo.NewSmsTemplateRepository,
 		user_repo.NewUserRepo,
 
 		// 初始化 LogService 相关依赖
@@ -49,11 +56,15 @@ func InitWebServer() *gin.Engine {
 
 		// 初始化 Service
 		code_svc.NewEmailService,
+		code_svc.NewSmsService,
+		email_svc.NewEmailService,
+		sms_svc.NewSmsService,
 		user_svc.NewUserService,
 
 		// 初始化 Handler
 		user_web.NewUserHandler,
 		email_web.NewEmailHandler,
+		sms_web.NewSmsHandler,
 
 		// 初始化 Web 服务器
 		ioc.InitWebServer,

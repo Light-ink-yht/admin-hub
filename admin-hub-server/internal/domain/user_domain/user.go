@@ -71,15 +71,15 @@ func ValidatePhone(phone string) error {
 // JudgeInputType 判断输入是邮箱、手机号还是无效格式（类似前端的类型判断）
 // 入参：待判断的字符串（邮箱/手机号）
 // 返回："email"（邮箱）、"phone"（手机号）、""（无效格式）
-func JudgeInputType(input string) string {
+func JudgeInputType(input string) (string, error) {
 	// 先判断手机号（纯数字特征，避免与邮箱混淆）
 	if _, err := phoneRegex.MatchString(input); err == nil {
-		return "phone"
+		return "phone", err
 	}
 	// 再判断邮箱（含 @ 特征）
 	if _, err := emailRegex.MatchString(input); err == nil {
-		return "email"
+		return "email", err
 	}
 	// 两者都不匹配，返回空字符串（无效格式）
-	return ""
+	return "", nil
 }
