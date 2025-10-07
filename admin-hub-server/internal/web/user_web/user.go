@@ -1,13 +1,14 @@
 package user_web
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/domain/user_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/user_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web"
 	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
 	"github.com/Light-ink-yht/admin-hub/pkg/res"
@@ -21,12 +22,14 @@ const biz = "signup"
 var _ web.Handler = (*UserHandler)(nil)
 
 type UserHandler struct {
+	svc        user_svc.UserService
 	codeSvc    code_svc.EmailServiceFace
 	logService log_svc.LogService
 }
 
-func NewUserHandler(codeSvc code_svc.EmailServiceFace, logService log_svc.LogService) *UserHandler {
+func NewUserHandler(svc user_svc.UserService, codeSvc code_svc.EmailServiceFace, logService log_svc.LogService) *UserHandler {
 	return &UserHandler{
+		svc:        svc,
 		codeSvc:    codeSvc,
 		logService: logService,
 	}
@@ -35,7 +38,7 @@ func NewUserHandler(codeSvc code_svc.EmailServiceFace, logService log_svc.LogSer
 func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
 	router := r.Group("/user")
 	router.PUT("/signup/email/code", h.SendSignupEmailCode) // 发送邮箱验证码
-	//router.POST("/signup/email/code", h.SignupEmail)        // 邮箱注册
+	//router.POST("/signup/email/code", h.Signup)        // 邮箱注册
 	//router.POST("/login", h.Login)                          // 登录
 	//router.POST("/layout", h.Layout)                        // 登出
 	//router.GET("/me", h.GetMyInfo)                          // 获取当前用户信息
@@ -47,39 +50,159 @@ func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *UserHandler) SendSignupEmailCode(ctx *gin.Context) {
 	var req user_domain.SendSignupEmailCodeRequest
 
-	// 获取客户端IP（从中间件获取）
-	clientIP, _ := middleware.GetRequestContextInfo(ctx)
-
 	if err := ctx.Bind(&req); err != nil {
-
-		// 记录业务错误日志
-		content := fmt.Sprintf("请求绑定失败: %s", err.Error())
-		h.logService.LogBusiness(ctx, log_domain.LogLevelError, "用户Web层", "发送注册邮箱验证码", "", "", "",
-			content, "失败", err.Error(), clientIP, nil)
+		h.logError(ctx, "发送注册邮箱验证码", "请求绑定失败", err)
 		return
 	}
 
 	err := h.codeSvc.Send(ctx, biz, req.AAA002, "发送邮箱验证码")
 
 	if err != nil {
-		// 记录业务错误日志
-		content := fmt.Sprintf("发送验证码失败: %s", req.AAA002)
-		h.logService.LogBusiness(ctx, log_domain.LogLevelError, "用户Web层", "发送注册邮箱验证码", "", "", "",
-			content, "失败", err.Error(), clientIP, nil)
-		ctx.JSON(http.StatusOK, res.Fail("系统异常"))
+		h.logError(ctx, "发送注册邮箱验证码", "发送验证码失败", err)
+		ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
 		return
 	}
 
-	// 记录业务成功日志
-	content := fmt.Sprintf("发送验证码成功: %s", req.AAA002)
-	h.logService.LogBusiness(ctx, log_domain.LogLevelInfo, "用户Web层", "发送注册邮箱验证码", "", "", "",
-		content, "成功", "", "", map[string]interface{}{
-			"email": req.AAA002,
-		})
-
+	h.logSuccess(ctx, "发送注册邮箱验证码", "发送验证码成功", map[string]interface{}{})
 	ctx.JSON(http.StatusOK, res.Success("验证码发送成功"))
 }
 
-func (h *UserHandler) SignupEmail(ctx *gin.Context) {
+// Signup 注册
+func (h *UserHandler) Signup(ctx *gin.Context) {
+	var req user_domain.SignUp
 
+	if err := ctx.Bind(&req); err != nil {
+		h.logError(ctx, "注册", "请求绑定失败", err)
+		return
+	}
+
+	// 判断前端传过来的 AAA018 是邮箱还是手机号
+	inputType := user_domain.JudgeInputType(req.AAA018)
+	if inputType == "email" {
+		// 验证验证码
+		ok, err := h.codeSvc.Verify(ctx, biz, req.AAA002, req.AAA017)
+		if errors.Is(err, code_svc.ErrCodeSendTooMany) {
+			// 如果发送验证码太频繁，返回错误信息
+			h.logWarn(ctx, "验证验证码", "发送验证码太频繁", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("发送验证码太频繁"))
+			return
+		}
+		if errors.Is(err, code_svc.RrrCodeVerifyTooMany) {
+			// 如果验证次数太多，返回错误信息
+			h.logWarn(ctx, "验证验证码", "验证次数太多", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("验证次数太多"))
+			return
+		}
+		if err != nil {
+			// 如果系统错误，返回错误信息
+			h.logError(ctx, "验证验证码", "系统异常", err)
+			ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
+			return
+		}
+
+		if !ok {
+			// 如果验证码错误，返回错误信息
+			h.logWarn(ctx, "验证验证码", "验证码错误", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("验证码错误"))
+			return
+		}
+		err = h.svc.Signup(ctx, &req)
+		if errors.Is(err, user_domain.ErrTheMailboxIsNotInTheRightFormat) {
+			// 如果邮箱格式无效，返回错误信息
+			h.logWarn(ctx, "用户邮箱注册", "电子邮件格式无效", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("电子邮件格式无效"))
+			return
+		}
+		if errors.Is(err, user_domain.ErrThePasswordIsNotInTheRightFormat) {
+			// 如果密码格式不对，返回错误信息
+			h.logWarn(ctx, "用户邮箱注册", "密码格式不对", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("密码长度必须为 8-20 个字符，并包含字母、数字和特殊字符"))
+			return
+		}
+		if errors.Is(err, user_domain.ErrThePasswordIsInconsistentTwice) {
+			// 如果两次密码不一致，返回错误信息
+			h.logWarn(ctx, "用户邮箱注册", "两次密码不一致", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("两次密码不一致"))
+			return
+		}
+		if errors.Is(err, user_svc.ErrUserDuplicateEmailOrPhone) {
+			// 如果邮箱冲突，返回错误信息
+			h.logWarn(ctx, "用户邮箱注册", "邮箱已存在", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("邮箱已存在"))
+			return
+		}
+		if err != nil {
+			// 如果系统错误，返回错误信息
+			h.logError(ctx, "用户邮箱注册", "系统异常", err)
+			ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
+			return
+		}
+
+		h.logSuccess(ctx, "邮箱注册", "邮箱注册成功", map[string]interface{}{})
+		ctx.JSON(http.StatusOK, res.Success("注册成功"))
+	} else if inputType == "phone" {
+		err := h.svc.Signup(ctx, &req)
+		if errors.Is(err, user_domain.ErrTheMobilePhoneNumberFormatIsInvalid) {
+			// 如果邮箱格式无效，返回错误信息
+			h.logWarn(ctx, "用户手机号注册", "手机号格式无效", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("手机号格式无效"))
+			return
+		}
+		if errors.Is(err, user_domain.ErrThePasswordIsNotInTheRightFormat) {
+			// 如果密码格式不对，返回错误信息
+			h.logWarn(ctx, "用户手机号注册", "密码格式不对", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("密码长度必须为 8-20 个字符，并包含字母、数字和特殊字符"))
+			return
+		}
+		if errors.Is(err, user_domain.ErrThePasswordIsInconsistentTwice) {
+			// 如果两次密码不一致，返回错误信息
+			h.logWarn(ctx, "用户手机号注册", "两次密码不一致", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("两次密码不一致"))
+			return
+		}
+		if errors.Is(err, user_svc.ErrUserDuplicateEmailOrPhone) {
+			// 如果邮箱冲突，返回错误信息
+			h.logWarn(ctx, "用户手机号注册", "手机号已存在", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("手机号已存在"))
+			return
+		}
+		if err != nil {
+			// 如果系统错误，返回错误信息
+			h.logError(ctx, "用户手机号注册", "系统异常", err)
+			ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
+			return
+		}
+
+		h.logSuccess(ctx, "用户手机号注册", "手机号注册成功", map[string]interface{}{})
+		ctx.JSON(http.StatusOK, res.Success("注册成功"))
+	}
+}
+
+// 记录错误日志
+func (h *UserHandler) logError(ctx *gin.Context, module, content string, err error) {
+	clientIP, _ := middleware.GetRequestContextInfo(ctx)
+	logError := ""
+	if err != nil {
+		logError = err.Error()
+	}
+	h.logService.LogBusiness(ctx, log_domain.LogLevelError, "用户Web层", module, "", "", "",
+		content, "失败", logError, clientIP, nil)
+}
+
+// 记录警告日志
+func (h *UserHandler) logWarn(ctx *gin.Context, module, content string, err error) {
+	clientIP, _ := middleware.GetRequestContextInfo(ctx)
+	logError := ""
+	if err != nil {
+		logError = err.Error()
+	}
+	h.logService.LogBusiness(ctx, log_domain.LogLevelWarn, "用户Web层", module, "", "", "",
+		content, "警告", logError, clientIP, nil)
+}
+
+// 记录成功日志
+func (h *UserHandler) logSuccess(ctx *gin.Context, module, content string, extra map[string]interface{}) {
+	clientIP, _ := middleware.GetRequestContextInfo(ctx)
+	h.logService.LogBusiness(ctx, log_domain.LogLevelInfo, "用户Web层", module, "", "", "",
+		content, "成功", "", clientIP, extra)
 }

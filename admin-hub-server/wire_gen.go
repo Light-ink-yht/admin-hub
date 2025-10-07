@@ -12,8 +12,10 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/user_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/user_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
@@ -24,9 +26,12 @@ import (
 
 // InitWebServer 初始化 Web 服务器
 func InitWebServer() *gin.Engine {
+	db := ioc.InitDB()
+	userDao := dao.NewUserDao(db)
+	userRepo := user_repo.NewUserRepo(userDao)
+	userService := user_svc.NewUserService(userRepo)
 	cmdable := ioc.InitRedis()
 	codeCache := code_cache.NewCodeCache(cmdable)
-	db := ioc.InitDB()
 	codeDAO := dao.NewCodeDAO(db)
 	codeRepository := code_repo.NewCodeRepository(codeCache, codeDAO)
 	logRepository := log_repo.NewLogRepository(db)
@@ -37,7 +42,7 @@ func InitWebServer() *gin.Engine {
 	emailTemplateDAO := dao.NewEmailTemplateDAO(db)
 	emailTemplateRepository := email_repo.NewEmailTemplateRepository(emailTemplateDAO)
 	emailServiceFace := code_svc.NewEmailService(codeRepository, logService, emailConfigRepository, emailTemplateRepository)
-	userHandler := user_web.NewUserHandler(emailServiceFace, logService)
+	userHandler := user_web.NewUserHandler(userService, emailServiceFace, logService)
 	emailHandler := email_web.NewEmailHandler(emailConfigRepository, emailTemplateRepository, logService)
 	engine := ioc.InitWebServer(userHandler, emailHandler, cmdable, logService, logger)
 	return engine

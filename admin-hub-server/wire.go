@@ -8,8 +8,10 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/repository/dao"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/log_repo"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/user_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/code_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/service/user_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
 	"github.com/Light-ink-yht/admin-hub/ioc"
@@ -30,6 +32,7 @@ func InitWebServer() *gin.Engine {
 		dao.NewCodeDAO,
 		dao.NewEmailConfigDAO,
 		dao.NewEmailTemplateDAO,
+		dao.NewUserDao,
 
 		// 初始化 cache
 		code_cache.NewCodeCache,
@@ -38,6 +41,7 @@ func InitWebServer() *gin.Engine {
 		code_repo.NewCodeRepository,
 		email_repo.NewEmailConfigRepository,
 		email_repo.NewEmailTemplateRepository,
+		user_repo.NewUserRepo,
 
 		// 初始化 LogService 相关依赖
 		log_repo.NewLogRepository,
@@ -45,10 +49,11 @@ func InitWebServer() *gin.Engine {
 
 		// 初始化 Service
 		code_svc.NewEmailService,
+		user_svc.NewUserService,
 
 		// 初始化 Handler
-		user_web.NewUserHandler,   // 会自动注入 codeSvc, logService, logger
-		email_web.NewEmailHandler, // 会自动注入 emailConfigRepo, emailTemplateRepo, logService
+		user_web.NewUserHandler,
+		email_web.NewEmailHandler,
 
 		// 初始化 Web 服务器
 		ioc.InitWebServer,

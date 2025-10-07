@@ -25,10 +25,19 @@ func SuccessWithData(msg string, data interface{}) Result {
 	}
 }
 
-// Fail 失败响应，不带数据
-func Fail(msg string) Result {
+// FailWithWarn 失败警告响应，不带数据
+func FailWithWarn(msg string) Result {
 	return Result{
 		Code: 1,
+		Msg:  msg,
+		Data: nil,
+	}
+}
+
+// FailWithError 失败错误响应，不带数据
+func FailWithError(msg string) Result {
+	return Result{
+		Code: 2,
 		Msg:  msg,
 		Data: nil,
 	}

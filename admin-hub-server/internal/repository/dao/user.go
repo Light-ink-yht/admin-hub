@@ -1,27 +1,55 @@
 package dao
 
 import (
-	"time"
+	"context"
+	"database/sql"
+	"errors"
 
-	"github.com/Light-ink-yht/admin-hub/pkg/model"
+	"github.com/Light-ink-yht/admin-hub/internal/domain/user_domain"
+	"github.com/go-sql-driver/mysql"
 )
 
-// AA01 用户模型
-type AA01 struct {
-	model.LN01
-	AAA001 int64     // 用户id
-	AAA002 string    // 邮箱 全局唯一
-	AAA003 string    // 手机号 全局唯一
-	AAA004 string    // 密码
-	AAA005 string    // 昵称
-	AAA006 string    // 姓名
-	AAA007 string    // 头像
-	AAA008 string    // 性别 1 男，2 女，3 未知
-	AAA009 time.Time // 生日
-	AAA010 string    // 状态 1 启用，2 禁用
-	AAA011 string    // 备注
-	AAA012 int       // 登录次数
-	AAA013 time.Time // 最后登录时间
-	AAA014 string    // 最后登录ip
-	AAA015 time.Time // 密码修改时间
+var (
+	ErrUserDuplicateEmailOrPhone = errors.New("邮箱或者手机号冲突")
+	ErrUserNotFound              = errors.New("未找到用户")
+)
+
+type UserDao interface {
+	Insert(ctx context.Context, user *user_domain.AA01) error
+}
+
+type userDao struct {
+	db *sql.DB
+}
+
+func NewUserDao(db *sql.DB) UserDao {
+	return &userDao{
+		db: db,
+	}
+}
+
+func (dao *userDao) Insert(ctx context.Context, user *user_domain.AA01) error {
+	query := `
+			INSERT INTO aa01 (
+				lan001, lan002, lan003, lan004, lan005, lan006, lan007,
+				aaa001, aaa002, aaa003, aaa004, aaa005, aaa006, aaa007,
+				aaa008, aaa009, aaa010, aaa011, aaa012, aaa013, aaa014, aaa015
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`
+	_, err := dao.db.ExecContext(ctx, query,
+		user.LAN001, user.LAN002, user.LAN003, user.LAN004, user.LAN005, user.LAN006, user.LAN007,
+		user.AAA001, user.AAA002, user.AAA003, user.AAA004, user.AAA005, user.AAA006, user.AAA007,
+		user.AAA008, user.AAA009, user.AAA010, user.AAA011, user.AAA012, user.AAA013, user.AAA014, user.AAA015,
+	)
+	if err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			const uniqueConflictsErrNo uint16 = 1062
+			if mysqlErr.Number == uniqueConflictsErrNo {
+				// 邮箱或者手机号冲突
+				return ErrUserDuplicateEmailOrPhone
+			}
+		}
+	}
+	return nil
 }

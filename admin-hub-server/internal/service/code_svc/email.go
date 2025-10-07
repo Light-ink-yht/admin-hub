@@ -9,11 +9,15 @@ import (
 
 	"github.com/Light-ink-yht/admin-hub/internal/domain/email_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
+	"github.com/Light-ink-yht/admin-hub/internal/repository/cache/code_cache"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/msg_svc/email/tencent"
 )
+
+var ErrCodeSendTooMany = code_cache.ErrCodeSendTooMany
+var RrrCodeVerifyTooMany = code_cache.RrrCodeVerifyTooMany
 
 type EmailServiceFace interface {
 	Send(ctx context.Context, biz string, email string, template string) error
