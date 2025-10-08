@@ -9,7 +9,7 @@ import (
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/service/sms_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web"
-	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
+	"github.com/Light-ink-yht/admin-hub/internal/web/middleware"
 	"github.com/Light-ink-yht/admin-hub/pkg/res"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"

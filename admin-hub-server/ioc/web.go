@@ -6,9 +6,9 @@ import (
 
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
 	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/middleware"
 	"github.com/Light-ink-yht/admin-hub/internal/web/sms_web"
 	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
-	"github.com/Light-ink-yht/admin-hub/ioc/middleware"
 	"github.com/Light-ink-yht/admin-hub/pkg/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -35,6 +35,10 @@ func InitMiddlewares(redisClient redis.Cmdable, logService log_svc.LogService, l
 		corsHdl(),
 		// 日志中间件 - 记录HTTP请求和响应信息
 		middleware.NewLogMiddleware(logService, logger),
+		// JWT 登录中间件，忽略指定路径
+		middleware.NewLoginJWTMiddlewareBuilder().
+			IgnorePaths("/api/user/signup/code").
+			IgnorePaths("/api/user/login").Build(),
 		// 基于 Redis 的速率限制中间件
 		ratelimit.NewBuilder(redisClient, time.Minute, 100).Build(),
 	}
