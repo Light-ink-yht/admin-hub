@@ -28,7 +28,7 @@ func SuccessWithData(msg string, data interface{}) Result {
 // FailWithWarn 失败警告响应，不带数据
 func FailWithWarn(msg string) Result {
 	return Result{
-		Code: 1,
+		Code: 1, // 警告
 		Msg:  msg,
 		Data: nil,
 	}
@@ -37,7 +37,7 @@ func FailWithWarn(msg string) Result {
 // FailWithError 失败错误响应，不带数据
 func FailWithError(msg string) Result {
 	return Result{
-		Code: 2,
+		Code: 2, // 错误
 		Msg:  msg,
 		Data: nil,
 	}

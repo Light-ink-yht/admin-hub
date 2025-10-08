@@ -16,6 +16,7 @@ type UserRepo interface {
 	Signup(ctx context.Context, user *user_domain.AA01) error
 	FindByEmail(ctx context.Context, aaa002 string) (*user_domain.AA01, error)
 	FindByPhone(ctx context.Context, aaa003 string) (*user_domain.AA01, error)
+	FindByUserId(ctx context.Context, aaa001 int64) (*user_domain.AA01, error)
 }
 
 type userRepo struct {
@@ -38,4 +39,8 @@ func (repo *userRepo) FindByEmail(ctx context.Context, aaa002 string) (*user_dom
 
 func (repo *userRepo) FindByPhone(ctx context.Context, aaa003 string) (*user_domain.AA01, error) {
 	return repo.dao.FindByPhone(ctx, aaa003)
+}
+
+func (repo *userRepo) FindByUserId(ctx context.Context, aaa001 int64) (*user_domain.AA01, error) {
+	return repo.dao.FindByUserId(ctx, aaa001)
 }

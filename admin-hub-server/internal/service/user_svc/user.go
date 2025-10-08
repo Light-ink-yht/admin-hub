@@ -17,12 +17,14 @@ var (
 	ErrUserDuplicateEmailOrPhone = user_repo.ErrUserDuplicateEmailOrPhone
 	ErrInvalidEmailOrPassword    = errors.New("邮箱或密码不对")
 	ErrInvalidPhoneOrPassword    = errors.New("手机号或密码不对")
+	ErrInvalidUser               = errors.New("当前用户不存在")
 )
 
 type UserService interface {
 	Signup(ctx context.Context, req *user_domain.SignUp) error
 	EmailLogin(ctx context.Context, req *user_domain.Login, userAgent string) (string, error)
 	PhoneLogin(ctx context.Context, req *user_domain.Login, userAgent string) (string, error)
+	GetInfo(ctx context.Context, AAA001 int64) (*user_domain.AA01, error)
 }
 
 type userService struct {
@@ -115,11 +117,24 @@ func (svc *userService) PhoneLogin(ctx context.Context, req *user_domain.Login, 
 
 	// 校验密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.AAA004), []byte(req.AAA004)); err != nil {
-		return "", ErrInvalidEmailOrPassword
+		return "", ErrInvalidPhoneOrPassword
 	}
 
 	// 生成JWT Token
 	return svc.setJWTToken(userAgent, user)
+}
+
+func (svc *userService) GetInfo(ctx context.Context, AAA001 int64) (*user_domain.AA01, error) {
+	user, err := svc.repo.FindByUserId(ctx, AAA001)
+	if errors.Is(err, user_repo.ErrUserNotFound) {
+		return nil, ErrInvalidUser
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // setJWTToken 生成JWT Token

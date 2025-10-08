@@ -43,12 +43,12 @@ func NewUserHandler(svc user_svc.UserService, emailSvc code_svc.EmailService, sm
 
 func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
 	router := r.Group("/user")
-	router.PUT("/signup/code", h.SendSignupCode) // 发送注册验证码
-	router.POST("/signup/code", h.Signup)        // 邮箱/手机号注册
-	router.GET("/captcha", h.GenerateCaptcha)    // 生成图形验证码
-	router.POST("/login", h.Login)               // 登录
+	router.POST("/signup/code", h.SendSignupCode) // 发送注册验证码
+	router.POST("/signup", h.Signup)              // 邮箱/手机号注册
+	router.GET("/captcha", h.GenerateCaptcha)     // 生成图形验证码
+	router.POST("/login", h.Login)                // 登录
 	//router.POST("/layout", h.Layout)           // 登出
-	//router.GET("/me", h.GetMyInfo)             // 获取当前用户信息
+	router.GET("/get/Info", h.GetInfo) // 获取当前用户信息
 	//router.PUT("/me", h.EditMyInfo)            // 编辑当前用户信息
 	//router.PUT("/password", h.EditPassword)    // 修改用户密码
 }
@@ -70,7 +70,7 @@ func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 
 		if errors.Is(err, user_domain.ErrTheMailboxIsNotInTheRightFormat) {
 			// 如果邮箱格式无效，返回错误信息
-			h.logWarn(ctx, "用户邮箱注册验证码", "电子邮件格式无效", err)
+			h.logWarn(ctx, "发送注册邮箱验证码", "电子邮件格式无效", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn("电子邮件格式无效"))
 			return
 		}
@@ -87,7 +87,7 @@ func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 		err := h.smsSvc.Send(ctx, biz, req.AAA018)
 		if errors.Is(err, user_domain.ErrTheMobilePhoneNumberFormatIsInvalid) {
 			// 如果手机号格式无效，返回错误信息
-			h.logWarn(ctx, "用户手机号注册", "手机号格式无效", err)
+			h.logWarn(ctx, "发送注册手机验证码", "手机号格式无效", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn("手机号格式无效"))
 			return
 		}
@@ -100,6 +100,11 @@ func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 
 		h.logSuccess(ctx, "发送注册手机验证码", "发送验证码成功", map[string]interface{}{})
 		ctx.JSON(http.StatusOK, res.Success("验证码发送成功"))
+
+	} else if inputType == "" {
+		h.logWarn(ctx, "发送注册证码", "请输入正确格式的邮箱或者手机号", errors.New("请输入正确格式的邮箱或者手机号"))
+		ctx.JSON(http.StatusOK, res.FailWithWarn("请输入正确格式的邮箱或者手机号"))
+		return
 	}
 
 }
@@ -242,6 +247,11 @@ func (h *UserHandler) Signup(ctx *gin.Context) {
 
 		h.logSuccess(ctx, "用户手机号注册", "手机号注册成功", map[string]interface{}{})
 		ctx.JSON(http.StatusOK, res.Success("注册成功"))
+
+	} else if inputType == "" {
+		h.logWarn(ctx, "注册", "请输入正确格式的邮箱或者手机号", errors.New("请输入正确格式的邮箱或者手机号"))
+		ctx.JSON(http.StatusOK, res.FailWithWarn("请输入正确格式的邮箱或者手机号"))
+		return
 	}
 }
 
@@ -317,7 +327,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 			return
 		}
 		if errors.Is(err, user_svc.ErrInvalidPhoneOrPassword) {
-			// 如果邮箱或密码错误，返回错误信息
+			// 如果手机号或密码错误，返回错误信息
 			h.logWarn(ctx, "用户手机号登录", "手机号或密码不对", err)
 			ctx.JSON(http.StatusOK, res.FailWithWarn("手机号或密码不对"))
 			return
@@ -334,8 +344,45 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 
 		h.logSuccess(ctx, "用户手机号登录", "手机号登录成功", map[string]interface{}{})
 		ctx.JSON(http.StatusOK, res.Success("登录成功"))
+
+	} else if inputType == "" {
+		h.logWarn(ctx, "登录", "请输入正确格式的邮箱或者手机号", errors.New("请输入正确格式的邮箱或者手机号"))
+		ctx.JSON(http.StatusOK, res.FailWithWarn("请输入正确格式的邮箱或者手机号"))
+		return
 	}
 
+}
+
+// GetInfo 获取当前用户信息
+func (h *UserHandler) GetInfo(ctx *gin.Context) {
+	c, _ := ctx.Get("claims")
+	claims, ok := c.(*user_svc.UserClaims)
+	if !ok {
+		// 你可以考虑监控住这里
+		h.logError(ctx, "获取当前用户信息", "系统异常", errors.New("系统异常"))
+		ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
+		return
+	}
+
+	user, err := h.svc.GetInfo(ctx, claims.UserId)
+	if errors.Is(err, user_svc.ErrInvalidUser) {
+		// 如果邮箱或密码错误，返回错误信息
+		h.logWarn(ctx, "获取当前用户信息", "当前用户不存在", err)
+		ctx.JSON(http.StatusOK, res.FailWithWarn("当前用户不存在"))
+		return
+	}
+	if err != nil {
+		// 如果系统错误，返回错误信息
+		h.logError(ctx, "获取当前用户信息", "系统异常", err)
+		ctx.JSON(http.StatusOK, res.FailWithError("系统异常"))
+		return
+	}
+
+	var resp user_domain.GetInfoResponse
+	resData := resp.ResData(user)
+
+	h.logSuccess(ctx, "获取当前用户信息", "获取成功", map[string]interface{}{})
+	ctx.JSON(http.StatusOK, res.SuccessWithData("获取成功", resData))
 }
 
 // GenerateCaptcha 生成图形验证码
