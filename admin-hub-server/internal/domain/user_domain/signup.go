@@ -15,20 +15,20 @@ type SignUp struct {
 func (req *SignUp) Validate() error {
 	if req.AAA002 != "" {
 		// 校验邮箱格式
-		if match, _ := emailRegex.MatchString(req.AAA002); !match {
+		if match, _ := EmailRegex.MatchString(req.AAA002); !match {
 			return ErrTheMailboxIsNotInTheRightFormat
 		}
 	}
 
 	if req.AAA003 != "" {
 		// 校验手机号格式
-		if match, _ := phoneRegex.MatchString(req.AAA003); !match {
+		if match, _ := PhoneRegex.MatchString(req.AAA003); !match {
 			return ErrTheMobilePhoneNumberFormatIsInvalid
 		}
 	}
 
 	// 校验密码格式
-	if match, _ := passwordRegex.MatchString(req.AAA004); !match {
+	if match, _ := PasswordRegex.MatchString(req.AAA004); !match {
 		return ErrThePasswordIsNotInTheRightFormat
 	}
 

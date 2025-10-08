@@ -9,6 +9,7 @@ import (
 
 	"github.com/Light-ink-yht/admin-hub/internal/domain/email_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
+	"github.com/Light-ink-yht/admin-hub/internal/domain/user_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/cache/code_cache"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/email_repo"
@@ -47,6 +48,10 @@ func NewEmailService(
 
 // Send 发送验证码 biz 区分业务场景
 func (svc *EmailService) Send(ctx context.Context, biz string, email string, templateType string) error {
+	// 校验请求
+	if match, _ := user_domain.EmailRegex.MatchString(email); !match {
+		return user_domain.ErrTheMailboxIsNotInTheRightFormat
+	}
 	// 生成验证码
 	code := svc.generateCode()
 

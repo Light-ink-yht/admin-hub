@@ -29,9 +29,9 @@ type AA01 struct {
 }
 
 var (
-	emailRegex                             = regexp2.MustCompile(`^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$`, regexp2.None)
-	passwordRegex                          = regexp2.MustCompile(`^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[._~!@#$^&*])[A-Za-z0-9._~!@#$^&*]{8,20}$`, regexp2.None)
-	phoneRegex                             = regexp2.MustCompile(`^1[3-9]\d{9}$`, regexp2.None)
+	EmailRegex                             = regexp2.MustCompile(`^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$`, regexp2.None)
+	PasswordRegex                          = regexp2.MustCompile(`^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[._~!@#$^&*])[A-Za-z0-9._~!@#$^&*]{8,20}$`, regexp2.None)
+	PhoneRegex                             = regexp2.MustCompile(`^1[3-9]\d{9}$`, regexp2.None)
 	ErrTheMailboxIsNotInTheRightFormat     = errors.New("电子邮件格式无效")
 	ErrThePasswordIsNotInTheRightFormat    = errors.New("密码长度必须为 8-20 个字符，并包含字母、数字和特殊字符")
 	ErrThePasswordIsInconsistentTwice      = errors.New("两次密码不一致")
@@ -47,7 +47,7 @@ func ValidateEmail(email string) error {
 		return ErrTheMailboxIsNotInTheRightFormat
 	}
 	// regexp2 的 MatchString 方法返回 bool（是否匹配）和 error（正则本身是否有误，这里预编译过，error 可忽略）
-	match, _ := emailRegex.MatchString(email)
+	match, _ := EmailRegex.MatchString(email)
 	if !match {
 		return ErrTheMailboxIsNotInTheRightFormat
 	}
@@ -61,7 +61,7 @@ func ValidatePhone(phone string) error {
 	if phone == "" {
 		return ErrTheMobilePhoneNumberFormatIsInvalid
 	}
-	match, _ := phoneRegex.MatchString(phone)
+	match, _ := PhoneRegex.MatchString(phone)
 	if !match {
 		return ErrTheMobilePhoneNumberFormatIsInvalid
 	}
@@ -71,15 +71,15 @@ func ValidatePhone(phone string) error {
 // JudgeInputType 判断输入是邮箱、手机号还是无效格式（类似前端的类型判断）
 // 入参：待判断的字符串（邮箱/手机号）
 // 返回："email"（邮箱）、"phone"（手机号）、""（无效格式）
-func JudgeInputType(input string) (string, error) {
+func JudgeInputType(input string) string {
 	// 先判断手机号（纯数字特征，避免与邮箱混淆）
-	if _, err := phoneRegex.MatchString(input); err == nil {
-		return "phone", err
+	if _, err := PhoneRegex.MatchString(input); err == nil {
+		return "phone"
 	}
 	// 再判断邮箱（含 @ 特征）
-	if _, err := emailRegex.MatchString(input); err == nil {
-		return "email", err
+	if _, err := EmailRegex.MatchString(input); err == nil {
+		return "email"
 	}
 	// 两者都不匹配，返回空字符串（无效格式）
-	return "", nil
+	return ""
 }

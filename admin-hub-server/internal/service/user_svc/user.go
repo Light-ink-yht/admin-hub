@@ -42,7 +42,7 @@ func (svc *userService) Signup(ctx context.Context, req *user_domain.SignUp) err
 		return err
 	}
 
-	// 生成唯一IDh
+	// 生成唯一ID
 	userId, err := svc.GenerateUniqueID()
 	if err != nil {
 		return err

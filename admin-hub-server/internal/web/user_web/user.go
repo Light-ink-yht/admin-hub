@@ -48,7 +48,7 @@ func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
 	//router.PUT("/password", h.EditPassword)                 // 修改用户密码
 }
 
-// SendSignupCode 发送邮箱验证码
+// SendSignupCode 发送注册验证码
 func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 	var req user_domain.SendSignupCodeRequest
 
@@ -58,23 +58,17 @@ func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 	}
 
 	// 判断前端传过来的 AAA018 是邮箱还是手机号
-	inputType, err := user_domain.JudgeInputType(req.AAA018)
-
-	if errors.Is(err, user_domain.ErrTheMailboxIsNotInTheRightFormat) {
-		// 如果邮箱格式无效，返回错误信息
-		h.logWarn(ctx, "用户邮箱注册", "电子邮件格式无效", err)
-		ctx.JSON(http.StatusOK, res.FailWithWarn("电子邮件格式无效"))
-		return
-	}
-	if errors.Is(err, user_domain.ErrTheMobilePhoneNumberFormatIsInvalid) {
-		// 如果邮箱格式无效，返回错误信息
-		h.logWarn(ctx, "用户手机号注册", "手机号格式无效", err)
-		ctx.JSON(http.StatusOK, res.FailWithWarn("手机号格式无效"))
-		return
-	}
+	inputType := user_domain.JudgeInputType(req.AAA018)
 
 	if inputType == "email" {
-		err = h.emailSvc.Send(ctx, biz, req.AAA018, "发送邮箱验证码")
+		err := h.emailSvc.Send(ctx, biz, req.AAA018, "发送邮箱验证码")
+
+		if errors.Is(err, user_domain.ErrTheMailboxIsNotInTheRightFormat) {
+			// 如果邮箱格式无效，返回错误信息
+			h.logWarn(ctx, "用户邮箱注册验证码", "电子邮件格式无效", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("电子邮件格式无效"))
+			return
+		}
 
 		if err != nil {
 			h.logError(ctx, "发送注册邮箱验证码", "发送验证码失败", err)
@@ -85,7 +79,13 @@ func (h *UserHandler) SendSignupCode(ctx *gin.Context) {
 		h.logSuccess(ctx, "发送注册邮箱验证码", "发送验证码成功", map[string]interface{}{})
 		ctx.JSON(http.StatusOK, res.Success("验证码发送成功"))
 	} else if inputType == "phone" {
-		err = h.emailSvc.Send(ctx, biz, req.AAA018, "发送手机验证码")
+		err := h.smsSvc.Send(ctx, biz, req.AAA018)
+		if errors.Is(err, user_domain.ErrTheMobilePhoneNumberFormatIsInvalid) {
+			// 如果手机号格式无效，返回错误信息
+			h.logWarn(ctx, "用户手机号注册", "手机号格式无效", err)
+			ctx.JSON(http.StatusOK, res.FailWithWarn("手机号格式无效"))
+			return
+		}
 
 		if err != nil {
 			h.logError(ctx, "发送注册手机验证码", "发送验证码失败", err)
@@ -109,19 +109,8 @@ func (h *UserHandler) Signup(ctx *gin.Context) {
 	}
 
 	// 判断前端传过来的 AAA018 是邮箱还是手机号
-	inputType, err := user_domain.JudgeInputType(req.AAA018)
-	if errors.Is(err, user_domain.ErrTheMailboxIsNotInTheRightFormat) {
-		// 如果邮箱格式无效，返回错误信息
-		h.logWarn(ctx, "用户邮箱注册", "电子邮件格式无效", err)
-		ctx.JSON(http.StatusOK, res.FailWithWarn("电子邮件格式无效"))
-		return
-	}
-	if errors.Is(err, user_domain.ErrTheMobilePhoneNumberFormatIsInvalid) {
-		// 如果邮箱格式无效，返回错误信息
-		h.logWarn(ctx, "用户手机号注册", "手机号格式无效", err)
-		ctx.JSON(http.StatusOK, res.FailWithWarn("手机号格式无效"))
-		return
-	}
+	inputType := user_domain.JudgeInputType(req.AAA018)
+
 	if inputType == "email" {
 		req.AAA002 = req.AAA018
 		// 验证验证码
@@ -188,7 +177,7 @@ func (h *UserHandler) Signup(ctx *gin.Context) {
 	} else if inputType == "phone" {
 		req.AAA003 = req.AAA018
 		// 验证验证码
-		ok, err := h.smsSvc.Verify(ctx, biz, req.AAA002, req.AAA017)
+		ok, err := h.smsSvc.Verify(ctx, biz, req.AAA003, req.AAA017)
 		if errors.Is(err, code_svc.ErrCodeSendTooMany) {
 			// 如果发送验证码太频繁，返回错误信息
 			h.logWarn(ctx, "验证验证码", "发送验证码太频繁", err)

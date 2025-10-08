@@ -6,6 +6,7 @@ import (
 	"math/rand"
 
 	"github.com/Light-ink-yht/admin-hub/internal/domain/log_domain"
+	"github.com/Light-ink-yht/admin-hub/internal/domain/user_domain"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/code_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/repository/sms_repo"
 	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
@@ -44,6 +45,11 @@ func NewSmsService(
 
 // Send 发验证码，我需要什么参数？
 func (svc *SmsService) Send(ctx context.Context, biz string, phone string) error {
+	// 校验请求
+	if match, _ := user_domain.PhoneRegex.MatchString(phone); !match {
+		return user_domain.ErrTheMobilePhoneNumberFormatIsInvalid
+	}
+
 	// 生成一个验证码
 	code := svc.generateCode()
 	// 塞进去 Redis 和数据库
