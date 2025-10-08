@@ -9,10 +9,13 @@ import (
 
 var (
 	ErrUserDuplicateEmailOrPhone = dao.ErrUserDuplicateEmailOrPhone
+	ErrUserNotFound              = dao.ErrUserNotFound
 )
 
 type UserRepo interface {
 	Signup(ctx context.Context, user *user_domain.AA01) error
+	FindByEmail(ctx context.Context, aaa002 string) (*user_domain.AA01, error)
+	FindByPhone(ctx context.Context, aaa003 string) (*user_domain.AA01, error)
 }
 
 type userRepo struct {
@@ -27,4 +30,12 @@ func NewUserRepo(dao dao.UserDao) UserRepo {
 
 func (repo *userRepo) Signup(ctx context.Context, user *user_domain.AA01) error {
 	return repo.dao.Insert(ctx, user)
+}
+
+func (repo *userRepo) FindByEmail(ctx context.Context, aaa002 string) (*user_domain.AA01, error) {
+	return repo.dao.FindByEmail(ctx, aaa002)
+}
+
+func (repo *userRepo) FindByPhone(ctx context.Context, aaa003 string) (*user_domain.AA01, error) {
+	return repo.dao.FindByPhone(ctx, aaa003)
 }
