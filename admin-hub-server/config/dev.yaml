@@ -1,0 +1,12 @@
+server:
+  port: ":8081"
+db.mysql:
+  dsn: "root:root@tcp(127.0.0.1:3306)/admin-hub?charset=utf8mb4&parseTime=True&loc=Local"
+
+redis:
+  addr: "127.0.0.1:6379"
+
+log:
+  environment: "dev"       # 开发环境: dev, 生产环境: pro
+  level: "debug"           # 日志级别: debug, info, warn, error
+  use_db: true              # 启用数据库日志存储

@@ -1,0 +1,72 @@
+package ioc
+
+import (
+	"strings"
+	"time"
+
+	"github.com/Light-ink-yht/admin-hub/internal/service/log_svc"
+	"github.com/Light-ink-yht/admin-hub/internal/web/email_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/middleware"
+	"github.com/Light-ink-yht/admin-hub/internal/web/sms_web"
+	"github.com/Light-ink-yht/admin-hub/internal/web/user_web"
+	"github.com/Light-ink-yht/admin-hub/pkg/ratelimit"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+)
+
+// InitWebServer 初始化 Web 服务器
+func InitWebServer(userHdl *user_web.UserHandler, emailHdl *email_web.EmailHandler, smsHdl *sms_web.SmsHandler, redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) *gin.Engine {
+	server := gin.Default()
+	middlewares := InitMiddlewares(redisClient, logService, logger)
+	server.Use(middlewares...)
+	r := server.Group("/api")
+	userHdl.RegisterRoutes(r)
+	emailHdl.RegisterRoutes(r)
+	smsHdl.RegisterRoutes(r)
+	return server
+}
+
+// InitMiddlewares 初始化中间件
+func InitMiddlewares(redisClient redis.Cmdable, logService log_svc.LogService, logger *zap.Logger) []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		// 跨域资源共享中间件
+		corsHdl(),
+		// 日志中间件 - 记录HTTP请求和响应信息
+		middleware.NewLogMiddleware(logService, logger),
+		// JWT 登录中间件，忽略指定路径
+		middleware.NewLoginJWTMiddlewareBuilder().
+			IgnorePaths("/api/user/signup/code").
+			IgnorePaths("/api/user/login").Build(),
+		// 基于 Redis 的速率限制中间件
+		ratelimit.NewBuilder(redisClient, time.Minute, 100).Build(),
+	}
+}
+
+// corsHdl 处理跨域资源共享
+func corsHdl() gin.HandlerFunc {
+	return cors.New(cors.Config{
+		// 允许的源，这里注释掉了，实际使用时需要根据需求配置
+		//AllowOrigins: []string{"*"},
+		// 允许的方法，这里注释掉了，实际使用时需要根据需求配置
+		//AllowMethods: []string{"POST", "GET"},
+		// 允许的请求头
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+		// 暴露的响应头，前端需要这个才能获取到自定义的响应头
+		ExposeHeaders: []string{"x-jwt-token"},
+		// 是否允许携带凭证（如 cookie）
+		AllowCredentials: true,
+		// 自定义允许的源的函数
+		AllowOriginFunc: func(origin string) bool {
+			if strings.HasPrefix(origin, "http://localhost") {
+				// 允许本地开发环境
+				return true
+			}
+			// 允许特定域名
+			return strings.Contains(origin, "yourcompany.com")
+		},
+		// 预检请求的有效期
+		MaxAge: 12 * time.Hour,
+	})
+}

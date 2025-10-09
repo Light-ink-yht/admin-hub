@@ -1,0 +1,19 @@
+@use 'theme.scss' as *;
+
+
+* {
+  padding: 0;
+  margin: 0;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+
+body {
+  position: relative;
+  transition: background-color 0.3s,
+  color 0.3s;
+  @include useTheme {
+    background-color: getModeVar('bgColor');
+    color: getModeVar('infoColor');
+  }
+}
